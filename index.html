@@ -66,10 +66,14 @@
   </div>
 
   <script>
-    // === 修正後的 Supabase 設定 ===
+    // 從 window.supabase 提取 createClient，不重新宣告 supabase
+    const { createClient } = window.supabase;
+
     const SUPABASE_URL = "https://irgfhvxrtejjxlifsfns.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZ2ZodnhydGVqanhsaWZzZm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4Njc3NDQsImV4cCI6MjEwNDQ0Mzc0NH0.Nvq3z9vcGIccGAp2cCO6qcxNja9Ov6hYbaAIzZVsFio";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 重新賦值覆蓋 window.supabase，不再重複宣告 const
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
 
@@ -95,7 +99,7 @@
       loadSchedules();
     }
 
-    // 監聽登入狀態改變（當從 Discord 跳轉回來時立即觸發）
+    // 監聽登入狀態改變
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         currentUser = session.user;
