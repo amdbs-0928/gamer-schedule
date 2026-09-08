@@ -3,69 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>社群每週開團作息表</title>
+  <title>社群每週開團作息中心</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { margin: 0; padding: 20px; background: #0b1120; color: #f8fafc; }
     .header { text-align: center; margin-bottom: 25px; }
-    .container { display: flex; gap: 24px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
-    .card { background: #1e293b; border-radius: 12px; padding: 20px; flex: 1; min-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-    h2 { margin-top: 0; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; font-size: 1.25rem; }
-    
-    /* 週課表風格排版 */
-    .day-group { margin-bottom: 18px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
-    .day-title { background: #1e293b; padding: 8px 14px; font-weight: bold; color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-    .day-count { font-size: 12px; background: #3b82f6; color: white; padding: 2px 8px; border-radius: 999px; }
-    .schedule-items { padding: 8px 12px; }
-    .schedule-item { background: #334155; padding: 8px 12px; border-radius: 6px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
-    .tag { display: inline-block; background: #0369a1; color: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px; }
+    .container { max-width: 900px; margin: 0 auto; }
 
-    /* 按鈕與表單 */
-    .btn { background: #5865F2; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.2s; }
+    /* 頂部三欄切換按鈕 */
+    .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn {
+      flex: 1; min-width: 200px; padding: 14px 16px; background: #1e293b;
+      border: 2px solid #334155; border-radius: 10px; color: #94a3b8;
+      cursor: pointer; font-size: 15px; font-weight: bold; text-align: center;
+      transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .tab-btn:hover { background: #334155; color: #f8fafc; }
+    .tab-btn.active {
+      background: #0284c7; border-color: #38bdf8; color: white;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+    }
+    .badge {
+      background: #ef4444; color: white; font-size: 11px;
+      padding: 2px 7px; border-radius: 999px; font-weight: normal;
+    }
+    .tab-btn.active .badge { background: #0f172a; color: #38bdf8; }
+
+    /* 欄位內容卡片 */
+    .tab-panel {
+      display: none; background: #1e293b; border-radius: 12px;
+      padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #334155;
+    }
+    .tab-panel.active { display: block; animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 即時遊玩名單樣式 */
+    .live-clock {
+      background: #0f172a; border: 1px solid #0369a1; border-radius: 8px;
+      padding: 12px; margin-bottom: 20px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 14px; color: #38bdf8;
+    }
+    .live-card {
+      background: #0f172a; border-left: 4px solid #10b981; border-radius: 8px;
+      padding: 14px 18px; margin-bottom: 12px; display: flex; justify-content: space-between;
+      align-items: center;
+    }
+    .live-name { font-size: 16px; font-weight: bold; color: #f8fafc; }
+    .live-time { font-size: 13px; color: #34d399; margin-left: 8px; }
+    .tag { display: inline-block; background: #0369a1; color: #e0f2fe; padding: 3px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+
+    /* 週作息清單排版 */
+    .day-group { margin-bottom: 16px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    .day-title { background: #182234; padding: 10px 14px; font-weight: bold; color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .schedule-item { background: #334155; padding: 10px 14px; border-radius: 6px; margin: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* 表單與按鈕 */
+    .btn { background: #5865F2; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; }
     .btn:hover { background: #4752c4; }
     .btn-submit { background: #10b981; }
     .btn-submit:hover { background: #059669; }
-    .btn-del { background: #ef4444; border: none; color: white; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
-    .btn-del:hover { background: #dc2626; }
-    
-    label { font-size: 13px; color: #94a3b8; font-weight: 500; }
-    input, select { width: 100%; padding: 9px; margin: 6px 0 14px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
-    .anon-badge { display: inline-flex; align-items: center; gap: 6px; background: #334155; padding: 6px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #a5f3fc; }
+    .btn-del { background: #ef4444; border: none; color: white; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+    label { font-size: 13px; color: #94a3b8; font-weight: 500; display: block; margin-top: 10px; }
+    input, select { width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
+    .anon-badge { display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; color: #38bdf8; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🎮 社群每週可玩遊戲作息表</h1>
-    <p style="color: #94a3b8; margin: 0; font-size: 14px;">匿名登記・依星期彙整・即時更新</p>
+    <h1>🎮 社群每週開團作息中心</h1>
+    <p style="color: #94a3b8; margin: 0; font-size: 14px;">點選下方欄位展開內容・即時同步在線可玩玩家</p>
   </div>
   
   <div class="container">
-    <!-- 左欄：每週作息看板 (依星期排序) -->
-    <div class="card" style="flex: 1.4;">
-      <h2>📅 本週各時段有空名單</h2>
+    <!-- 頂部三欄頁籤切換按鈕 -->
+    <div class="tab-nav">
+      <div class="tab-btn active" onclick="switchTab('tab-live')">
+        🟢 現在能玩的人 <span id="live-count-badge" class="badge">0</span>
+      </div>
+      <div class="tab-btn" onclick="switchTab('tab-weekly')">
+        📅 本週各時段名單
+      </div>
+      <div class="tab-btn" onclick="switchTab('tab-register')">
+        🕒 登記可遊玩時段
+      </div>
+    </div>
+
+    <!-- 欄位 1：現在能玩的人 (動態時間比對) -->
+    <div id="tab-live" class="tab-panel active">
+      <div class="live-clock">
+        <span id="current-time-display">🕒 讀取時間中...</span>
+        <span style="font-size: 12px; color: #94a3b8;">每 30 秒自動重新判定</span>
+      </div>
+      <div id="live-users-list">計算中...</div>
+    </div>
+
+    <!-- 欄位 2：本週各時段有空名單 -->
+    <div id="tab-weekly" class="tab-panel">
       <div id="weekly-board">載入中...</div>
     </div>
 
-    <!-- 右欄：匿名時段登記區 -->
-    <div class="card">
-      <h2>🕒 登記可遊玩時段</h2>
+    <!-- 欄位 3：登記可遊玩時段 -->
+    <div id="tab-register" class="tab-panel">
       <div id="auth-section">
-        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">
-          系統僅使用 Discord 作為唯一防偽憑證，確保只有本人可刪除自己的紀錄，<strong>不會向前台公開您的 Discord 帳號與頭像</strong>。
+        <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+          透過 Discord 進行唯一防偽認證，確保只有您本人能刪除自己登記的時段。<br/>
+          <strong>前台完全匿名顯示，絕不洩漏 Discord 使用者名稱與頭像。</strong>
         </p>
         <button id="login-btn" class="btn">驗證身分並開始登記</button>
       </div>
 
       <div id="form-section" style="display: none;">
         <div class="anon-badge">
-          <span>🛡️ 已驗證防竄改身分（匿名保護中）</span>
-          <a href="#" id="logout-link" style="color: #ef4444; margin-left: auto; text-decoration: none; font-size: 12px;">登出</a>
+          <span>🛡️ 已驗證防偽身分（匿名保護中）</span>
+          <a href="#" id="logout-link" style="color: #ef4444; text-decoration: none;">登出</a>
         </div>
 
         <form id="schedule-form">
           <label>前台顯示的匿名暱稱：</label>
-          <input type="text" id="display-name" placeholder="例如: 瓦羅蘭特攻、神秘路人、課堂偷玩" required />
+          <input type="text" id="display-name" placeholder="例如: 特戰小號、下班打工仔、路人丁" required />
 
           <label>星期：</label>
           <select id="day-of-week" required>
@@ -85,9 +141,9 @@
           <input type="time" id="end-time" required value="23:30" />
 
           <label>想玩的遊戲 / 備註：</label>
-          <input type="text" id="game-tag" placeholder="例如: Steam派對遊戲、全通、Apex" />
+          <input type="text" id="game-tag" placeholder="例如: 瓦羅蘭、Steam小遊戲、Apex" />
 
-          <button type="submit" class="btn btn-submit">新增此時段</button>
+          <button type="submit" class="btn btn-submit">新增時段至每週名單</button>
         </form>
       </div>
     </div>
@@ -101,14 +157,20 @@
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
+    let cachedSchedules = []; // 本地快取資料，方便計時器秒級判定
     const daysMap = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
-    const orderedDays = [1, 2, 3, 4, 5, 6, 0]; // 週一至週日顯示順序
+    const orderedDays = [1, 2, 3, 4, 5, 6, 0];
 
-    // 讀取上次暫存的暱稱
-    const savedName = localStorage.getItem('last_anon_name');
-    if (savedName) document.getElementById('display-name').value = savedName;
+    // 頁籤切換
+    function switchTab(panelId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+      
+      event.currentTarget.classList.add('active');
+      document.getElementById(panelId).classList.add('active');
+    }
 
-    // 檢查登入狀態
+    // 檢查認證狀態
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -120,10 +182,9 @@
         document.getElementById('auth-section').style.display = 'block';
         document.getElementById('form-section').style.display = 'none';
       }
-      loadWeeklySchedules();
+      loadData();
     }
 
-    // 登入狀態變更監聽
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         currentUser = session.user;
@@ -134,10 +195,9 @@
         document.getElementById('auth-section').style.display = 'block';
         document.getElementById('form-section').style.display = 'none';
       }
-      loadWeeklySchedules();
+      loadData();
     });
 
-    // Discord 登入
     document.getElementById('login-btn').addEventListener('click', async () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
@@ -146,56 +206,114 @@
       if (error) alert('登入失敗：' + error.message);
     });
 
-    // 登出
     document.getElementById('logout-link').addEventListener('click', async (e) => {
       e.preventDefault();
       await supabase.auth.signOut();
       checkAuth();
     });
 
-    // 載入並依星期聚合資料
-    async function loadWeeklySchedules() {
+    // 讀取資料庫全量資料
+    async function loadData() {
       const { data, error } = await supabase
         .from('weekly_gamer_schedules')
         .select('*')
         .order('start_time', { ascending: true });
 
-      const board = document.getElementById('weekly-board');
       if (error) {
-        board.innerHTML = `<p style="color:#ef4444;">載入失敗: ${error.message}</p>`;
+        console.error(error);
         return;
       }
 
-      if (!data || data.length === 0) {
-        board.innerHTML = '<p style="color:#94a3b8;">目前尚未有任何人登記每週時段。</p>';
-        return;
-      }
+      cachedSchedules = data || [];
+      renderWeeklyBoard();
+      evaluateLivePlayers();
+    }
 
-      // 按星期分組
-      const grouped = {};
-      orderedDays.forEach(d => grouped[d] = []);
-      data.forEach(item => {
-        if (grouped[item.day_of_week]) {
-          grouped[item.day_of_week].push(item);
+    // 核心邏輯：判斷目前時間有哪些玩家能玩
+    function evaluateLivePlayers() {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 是週日，1-6 是週一至六
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${hours}:${minutes}:00`;
+
+      // 畫面即時時間顯示
+      document.getElementById('current-time-display').innerText = 
+        `🕒 現在時間：${daysMap[currentDay]} ${hours}:${minutes}`;
+
+      // 過濾條件：
+      // 1. 星期幾必須相符
+      // 2. 一般時段 (例 20:00 ~ 23:00)：start <= current < end
+      // 3. 跨日深夜時段 (例 22:00 ~ 02:00)：current >= start 或 current < end
+      const activePlayers = cachedSchedules.filter(item => {
+        if (item.day_of_week !== currentDay) return false;
+
+        const start = item.start_time;
+        const end = item.end_time;
+
+        if (start <= end) {
+          return currentTimeStr >= start && currentTimeStr < end;
+        } else {
+          // 跨午夜情況
+          return currentTimeStr >= start || currentTimeStr < end;
         }
       });
 
-      // 渲染畫面
+      // 更新紅/綠人數標籤
+      document.getElementById('live-count-badge').innerText = activePlayers.length;
+
+      const liveListEl = document.getElementById('live-users-list');
+      if (activePlayers.length === 0) {
+        liveListEl.innerHTML = `
+          <div style="text-align: center; padding: 40px 0; color: #64748b;">
+            <p style="font-size: 16px; margin-bottom: 6px;">😴 目前時段沒有人登記可遊玩</p>
+            <span style="font-size: 13px;">可以點選「登記可遊玩時段」新增你的上線時間！</span>
+          </div>
+        `;
+        return;
+      }
+
+      liveListEl.innerHTML = activePlayers.map(item => `
+        <div class="live-card">
+          <div>
+            <span class="live-name">🎮 ${escapeHtml(item.display_name)}</span>
+            <span class="live-time">(${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)})</span>
+            ${item.game_tag ? `<span class="tag">🎯 ${escapeHtml(item.game_tag)}</span>` : ''}
+          </div>
+          <span style="color:#34d399; font-size:13px; font-weight:bold;">🟢 在線可玩中</span>
+        </div>
+      `).join('');
+    }
+
+    // 渲染本週各時段名單
+    function renderWeeklyBoard() {
+      const board = document.getElementById('weekly-board');
+      if (!cachedSchedules || cachedSchedules.length === 0) {
+        board.innerHTML = '<p style="color:#94a3b8; text-align:center;">目前尚無任何人登記時段。</p>';
+        return;
+      }
+
+      const grouped = {};
+      orderedDays.forEach(d => grouped[d] = []);
+      cachedSchedules.forEach(item => {
+        if (grouped[item.day_of_week]) grouped[item.day_of_week].push(item);
+      });
+
       board.innerHTML = orderedDays.map(dayKey => {
         const list = grouped[dayKey];
         return `
           <div class="day-group">
             <div class="day-title">
               <span>${daysMap[dayKey]}</span>
-              <span class="day-count">${list.length} 人可玩</span>
+              <span style="font-size: 12px; color: #38bdf8;">${list.length} 個時段</span>
             </div>
-            <div class="schedule-items">
-              ${list.length === 0 ? '<div style="color:#64748b; font-size:12px; padding:4px 0;">尚無人登記</div>' : ''}
+            <div>
+              ${list.length === 0 ? '<div style="color:#64748b; font-size:12px; padding:10px 14px;">無人登記</div>' : ''}
               ${list.map(item => `
                 <div class="schedule-item">
                   <div>
                     <strong>👤 ${escapeHtml(item.display_name)}</strong>
-                    <span style="color:#38bdf8; font-size:13px; margin-left:6px;">🕒 ${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)}</span>
+                    <span style="color:#38bdf8; font-size:13px; margin-left:8px;">🕒 ${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)}</span>
                     ${item.game_tag ? `<span class="tag">🎯 ${escapeHtml(item.game_tag)}</span>` : ''}
                   </div>
                   ${currentUser && currentUser.id === item.user_id ? 
@@ -208,7 +326,7 @@
       }).join('');
     }
 
-    // HTML 跳脫防 XSS
+    // 防 XSS 跳脫
     function escapeHtml(str) {
       if (!str) return '';
       return str.replace(/[&<>"']/g, m => ({
@@ -216,7 +334,7 @@
       }[m]));
     }
 
-    // 新增時段
+    // 表單新增
     document.getElementById('schedule-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const displayName = document.getElementById('display-name').value.trim();
@@ -235,28 +353,36 @@
       if (error) {
         alert('儲存失敗：' + error.message);
       } else {
-        alert('時段已成功新增至每週作息！');
+        alert('新增成功！');
         document.getElementById('game-tag').value = '';
-        loadWeeklySchedules();
+        loadData();
       }
     });
 
-    // 刪除時段
+    // 刪除自身時段
     window.deleteSchedule = async (id) => {
-      if (!confirm('確定刪除此匿名時段？')) return;
+      if (!confirm('確定刪除此時段？')) return;
       const { error } = await supabase.from('weekly_gamer_schedules').delete().eq('id', id);
       if (error) alert(error.message);
-      else loadWeeklySchedules();
+      else loadData();
     };
 
-    // 即時監聽
+    // 記住暱稱
+    const savedName = localStorage.getItem('last_anon_name');
+    if (savedName) document.getElementById('display-name').value = savedName;
+
+    // Supabase 即時監聽
     supabase
       .channel('public:weekly_gamer_schedules')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_gamer_schedules' }, () => {
-        loadWeeklySchedules();
+        loadData();
       })
       .subscribe();
 
+    // 定時器：每 30 秒自動更新時間並刷新「現在能玩的人」
+    setInterval(evaluateLivePlayers, 30000);
+
+    // 啟動
     checkAuth();
   </script>
 </body>
