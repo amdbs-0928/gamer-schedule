@@ -66,7 +66,7 @@
   </div>
 
   <script>
-    // === 替換成你的 Supabase 專案資訊 ===
+    // === 修正後的 Supabase 設定 ===
     const SUPABASE_URL = "https://irgfhvxrtejjxlifsfns.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZ2ZodnhydGVqanhsaWZzZm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4Njc3NDQsImV4cCI6MjEwNDQ0Mzc0NH0.Nvq3z9vcGIccGAp2cCO6qcxNja9Ov6hYbaAIzZVsFio";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -78,7 +78,7 @@
 
     // 檢查登入狀態
     async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
       if (session) {
         currentUser = session.user;
         document.getElementById('auth-section').style.display = 'none';
@@ -95,12 +95,27 @@
       loadSchedules();
     }
 
+    // 監聽登入狀態改變（當從 Discord 跳轉回來時立即觸發）
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        currentUser = session.user;
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('form-section').style.display = 'block';
+        
+        const meta = currentUser.user_metadata;
+        document.getElementById('display-name').innerText = meta.full_name || meta.custom_claims?.global_name || '玩家';
+        document.getElementById('avatar').src = meta.avatar_url || 'https://via.placeholder.com/40';
+        loadSchedules();
+      }
+    });
+
     // Discord 登入
     document.getElementById('login-btn').addEventListener('click', async () => {
-      await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
-        options: { redirectTo: window.location.origin + window.location.pathname }
+        options: { redirectTo: window.location.href.split('#')[0] }
       });
+      if (error) alert('登入跳轉失敗：' + error.message);
     });
 
     // 登出
@@ -119,6 +134,11 @@
         .order('start_time', { ascending: true });
 
       const listEl = document.getElementById('schedule-list');
+      if (error) {
+        listEl.innerHTML = `<p style="color:#ef4444;">資料庫讀取失敗：${error.message}</p>`;
+        return;
+      }
+
       if (!data || data.length === 0) {
         listEl.innerHTML = '<p style="color:#94a3b8;">目前尚無人登記今日以後的時段。</p>';
         return;
