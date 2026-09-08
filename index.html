@@ -3,114 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>社群開團作息表</title>
+  <title>社群每週開團作息表</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
-    .container { display: flex; gap: 20px; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
-    .card { background: #1e293b; border-radius: 10px; padding: 20px; flex: 1; min-width: 320px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    h2 { margin-top: 0; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-    .item { background: #334155; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .btn { background: #5865F2; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+    body { margin: 0; padding: 20px; background: #0b1120; color: #f8fafc; }
+    .header { text-align: center; margin-bottom: 25px; }
+    .container { display: flex; gap: 24px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; flex: 1; min-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    h2 { margin-top: 0; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; font-size: 1.25rem; }
+    
+    /* 週課表風格排版 */
+    .day-group { margin-bottom: 18px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
+    .day-title { background: #1e293b; padding: 8px 14px; font-weight: bold; color: #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .day-count { font-size: 12px; background: #3b82f6; color: white; padding: 2px 8px; border-radius: 999px; }
+    .schedule-items { padding: 8px 12px; }
+    .schedule-item { background: #334155; padding: 8px 12px; border-radius: 6px; margin: 6px 0; display: flex; justify-content: space-between; align-items: center; }
+    .tag { display: inline-block; background: #0369a1; color: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 6px; }
+
+    /* 按鈕與表單 */
+    .btn { background: #5865F2; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.2s; }
     .btn:hover { background: #4752c4; }
-    .btn-del { background: #ef4444; padding: 4px 8px; font-size: 12px; width: auto; }
-    input, select { width: 100%; padding: 8px; margin: 8px 0 16px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: white; }
-    .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-    .user-avatar { width: 40px; height: 40px; border-radius: 50%; }
+    .btn-submit { background: #10b981; }
+    .btn-submit:hover { background: #059669; }
+    .btn-del { background: #ef4444; border: none; color: white; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
+    .btn-del:hover { background: #dc2626; }
+    
+    label { font-size: 13px; color: #94a3b8; font-weight: 500; }
+    input, select { width: 100%; padding: 9px; margin: 6px 0 14px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; }
+    .anon-badge { display: inline-flex; align-items: center; gap: 6px; background: #334155; padding: 6px 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; color: #a5f3fc; }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center; margin-bottom: 25px;">🎮 社群開團作息協調表</h1>
+  <div class="header">
+    <h1>🎮 社群每週可玩遊戲作息表</h1>
+    <p style="color: #94a3b8; margin: 0; font-size: 14px;">匿名登記・依星期彙整・即時更新</p>
+  </div>
   
   <div class="container">
-    <!-- 左欄：可遊玩人員名單 -->
-    <div class="card">
-      <h2>🟢 目前可遊玩人員列表</h2>
-      <div id="schedule-list">載入中...</div>
+    <!-- 左欄：每週作息看板 (依星期排序) -->
+    <div class="card" style="flex: 1.4;">
+      <h2>📅 本週各時段有空名單</h2>
+      <div id="weekly-board">載入中...</div>
     </div>
 
-    <!-- 右欄：個人時段填寫 -->
+    <!-- 右欄：匿名時段登記區 -->
     <div class="card">
-      <h2>🕒 個人作息登記</h2>
+      <h2>🕒 登記可遊玩時段</h2>
       <div id="auth-section">
-        <button id="login-btn" class="btn">使用 Discord 登入登記時間</button>
+        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">
+          系統僅使用 Discord 作為唯一防偽憑證，確保只有本人可刪除自己的紀錄，<strong>不會向前台公開您的 Discord 帳號與頭像</strong>。
+        </p>
+        <button id="login-btn" class="btn">驗證身分並開始登記</button>
       </div>
 
       <div id="form-section" style="display: none;">
-        <div class="user-info">
-          <img id="avatar" class="user-avatar" src="" alt="avatar" />
-          <div>
-            <strong id="display-name"></strong>
-            <div style="font-size: 12px; color: #94a3b8;"><a href="#" id="logout-link" style="color:#ef4444;">登出</a></div>
-          </div>
+        <div class="anon-badge">
+          <span>🛡️ 已驗證防竄改身分（匿名保護中）</span>
+          <a href="#" id="logout-link" style="color: #ef4444; margin-left: auto; text-decoration: none; font-size: 12px;">登出</a>
         </div>
 
         <form id="schedule-form">
-          <label>日期：</label>
-          <input type="date" id="date" required />
+          <label>前台顯示的匿名暱稱：</label>
+          <input type="text" id="display-name" placeholder="例如: 瓦羅蘭特攻、神秘路人、課堂偷玩" required />
+
+          <label>星期：</label>
+          <select id="day-of-week" required>
+            <option value="1">星期一 (Mon)</option>
+            <option value="2">星期二 (Tue)</option>
+            <option value="3">星期三 (Wed)</option>
+            <option value="4">星期四 (Thu)</option>
+            <option value="5">星期五 (Fri)</option>
+            <option value="6">星期六 (Sat)</option>
+            <option value="0">星期日 (Sun)</option>
+          </select>
 
           <label>開始時間：</label>
-          <input type="time" id="start-time" required />
+          <input type="time" id="start-time" required value="20:00" />
 
           <label>結束時間：</label>
-          <input type="time" id="end-time" required />
+          <input type="time" id="end-time" required value="23:30" />
 
           <label>想玩的遊戲 / 備註：</label>
-          <input type="text" id="game-tag" placeholder="例如: 瓦羅蘭、Steam小遊戲、全通" />
+          <input type="text" id="game-tag" placeholder="例如: Steam派對遊戲、全通、Apex" />
 
-          <button type="submit" class="btn" style="background:#10b981;">送出我的時間</button>
+          <button type="submit" class="btn btn-submit">新增此時段</button>
         </form>
       </div>
     </div>
   </div>
 
   <script>
-    // 從 window.supabase 提取 createClient，不重新宣告 supabase
     const { createClient } = window.supabase;
-
     const SUPABASE_URL = "https://irgfhvxrtejjxlifsfns.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZ2ZodnhydGVqanhsaWZzZm5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4Njc3NDQsImV4cCI6MjEwNDQ0Mzc0NH0.Nvq3z9vcGIccGAp2cCO6qcxNja9Ov6hYbaAIzZVsFio";
 
-    // 重新賦值覆蓋 window.supabase，不再重複宣告 const
     supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
+    const daysMap = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    const orderedDays = [1, 2, 3, 4, 5, 6, 0]; // 週一至週日顯示順序
 
-    // 初始化預設今日日期
-    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+    // 讀取上次暫存的暱稱
+    const savedName = localStorage.getItem('last_anon_name');
+    if (savedName) document.getElementById('display-name').value = savedName;
 
     // 檢查登入狀態
     async function checkAuth() {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         currentUser = session.user;
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('form-section').style.display = 'block';
-        
-        const meta = currentUser.user_metadata;
-        document.getElementById('display-name').innerText = meta.full_name || meta.custom_claims?.global_name || '玩家';
-        document.getElementById('avatar').src = meta.avatar_url || 'https://via.placeholder.com/40';
       } else {
         currentUser = null;
         document.getElementById('auth-section').style.display = 'block';
         document.getElementById('form-section').style.display = 'none';
       }
-      loadSchedules();
+      loadWeeklySchedules();
     }
 
-    // 監聽登入狀態改變
+    // 登入狀態變更監聽
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         currentUser = session.user;
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('form-section').style.display = 'block';
-        
-        const meta = currentUser.user_metadata;
-        document.getElementById('display-name').innerText = meta.full_name || meta.custom_claims?.global_name || '玩家';
-        document.getElementById('avatar').src = meta.avatar_url || 'https://via.placeholder.com/40';
-        loadSchedules();
+      } else {
+        currentUser = null;
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('form-section').style.display = 'none';
       }
+      loadWeeklySchedules();
     });
 
     // Discord 登入
@@ -119,7 +143,7 @@
         provider: 'discord',
         options: { redirectTo: window.location.href.split('#')[0] }
       });
-      if (error) alert('登入跳轉失敗：' + error.message);
+      if (error) alert('登入失敗：' + error.message);
     });
 
     // 登出
@@ -129,76 +153,107 @@
       checkAuth();
     });
 
-    // 撈取資料
-    async function loadSchedules() {
+    // 載入並依星期聚合資料
+    async function loadWeeklySchedules() {
       const { data, error } = await supabase
-        .from('gamer_schedules')
+        .from('weekly_gamer_schedules')
         .select('*')
-        .gte('schedule_date', new Date().toISOString().split('T')[0])
         .order('start_time', { ascending: true });
 
-      const listEl = document.getElementById('schedule-list');
+      const board = document.getElementById('weekly-board');
       if (error) {
-        listEl.innerHTML = `<p style="color:#ef4444;">資料庫讀取失敗：${error.message}</p>`;
+        board.innerHTML = `<p style="color:#ef4444;">載入失敗: ${error.message}</p>`;
         return;
       }
 
       if (!data || data.length === 0) {
-        listEl.innerHTML = '<p style="color:#94a3b8;">目前尚無人登記今日以後的時段。</p>';
+        board.innerHTML = '<p style="color:#94a3b8;">目前尚未有任何人登記每週時段。</p>';
         return;
       }
 
-      listEl.innerHTML = data.map(item => `
-        <div class="item">
-          <div>
-            <strong>${item.nickname}</strong> 
-            <span style="font-size:12px; color:#38bdf8;">[${item.schedule_date}]</span><br/>
-            <span>🕒 ${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)}</span>
-            ${item.game_tag ? `<div style="font-size:12px; color:#a7f3d0; margin-top:4px;">🎯 ${item.game_tag}</div>` : ''}
+      // 按星期分組
+      const grouped = {};
+      orderedDays.forEach(d => grouped[d] = []);
+      data.forEach(item => {
+        if (grouped[item.day_of_week]) {
+          grouped[item.day_of_week].push(item);
+        }
+      });
+
+      // 渲染畫面
+      board.innerHTML = orderedDays.map(dayKey => {
+        const list = grouped[dayKey];
+        return `
+          <div class="day-group">
+            <div class="day-title">
+              <span>${daysMap[dayKey]}</span>
+              <span class="day-count">${list.length} 人可玩</span>
+            </div>
+            <div class="schedule-items">
+              ${list.length === 0 ? '<div style="color:#64748b; font-size:12px; padding:4px 0;">尚無人登記</div>' : ''}
+              ${list.map(item => `
+                <div class="schedule-item">
+                  <div>
+                    <strong>👤 ${escapeHtml(item.display_name)}</strong>
+                    <span style="color:#38bdf8; font-size:13px; margin-left:6px;">🕒 ${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)}</span>
+                    ${item.game_tag ? `<span class="tag">🎯 ${escapeHtml(item.game_tag)}</span>` : ''}
+                  </div>
+                  ${currentUser && currentUser.id === item.user_id ? 
+                    `<button class="btn-del" onclick="deleteSchedule('${item.id}')">刪除</button>` : ''}
+                </div>
+              `).join('')}
+            </div>
           </div>
-          ${currentUser && currentUser.id === item.user_id ? 
-            `<button class="btn btn-del" onclick="deleteSchedule('${item.id}')">刪除</button>` : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    // HTML 跳脫防 XSS
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
 
     // 新增時段
     document.getElementById('schedule-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const meta = currentUser.user_metadata;
-      const nickname = meta.full_name || meta.custom_claims?.global_name || '未知玩家';
+      const displayName = document.getElementById('display-name').value.trim();
+      localStorage.setItem('last_anon_name', displayName);
 
       const newRecord = {
         user_id: currentUser.id,
-        nickname: nickname,
-        schedule_date: document.getElementById('date').value,
+        display_name: displayName,
+        day_of_week: parseInt(document.getElementById('day-of-week').value),
         start_time: document.getElementById('start-time').value,
         end_time: document.getElementById('end-time').value,
-        game_tag: document.getElementById('game-tag').value
+        game_tag: document.getElementById('game-tag').value.trim()
       };
 
-      const { error } = await supabase.from('gamer_schedules').insert([newRecord]);
+      const { error } = await supabase.from('weekly_gamer_schedules').insert([newRecord]);
       if (error) {
         alert('儲存失敗：' + error.message);
       } else {
-        alert('登記成功！');
-        loadSchedules();
+        alert('時段已成功新增至每週作息！');
+        document.getElementById('game-tag').value = '';
+        loadWeeklySchedules();
       }
     });
 
     // 刪除時段
     window.deleteSchedule = async (id) => {
-      if (!confirm('確定刪除此時段？')) return;
-      const { error } = await supabase.from('gamer_schedules').delete().eq('id', id);
+      if (!confirm('確定刪除此匿名時段？')) return;
+      const { error } = await supabase.from('weekly_gamer_schedules').delete().eq('id', id);
       if (error) alert(error.message);
-      else loadSchedules();
+      else loadWeeklySchedules();
     };
 
-    // 即時同步監聽 (Realtime)
+    // 即時監聽
     supabase
-      .channel('public:gamer_schedules')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gamer_schedules' }, () => {
-        loadSchedules();
+      .channel('public:weekly_gamer_schedules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_gamer_schedules' }, () => {
+        loadWeeklySchedules();
       })
       .subscribe();
 
