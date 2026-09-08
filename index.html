@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>社群開團作息表</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
+    .container { display: flex; gap: 20px; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
+    .card { background: #1e293b; border-radius: 10px; padding: 20px; flex: 1; min-width: 320px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    h2 { margin-top: 0; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .item { background: #334155; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .btn { background: #5865F2; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+    .btn:hover { background: #4752c4; }
+    .btn-del { background: #ef4444; padding: 4px 8px; font-size: 12px; width: auto; }
+    input, select { width: 100%; padding: 8px; margin: 8px 0 16px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: white; }
+    .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center; margin-bottom: 25px;">🎮 社群開團作息協調表</h1>
+  
+  <div class="container">
+    <!-- 左欄：可遊玩人員名單 -->
+    <div class="card">
+      <h2>🟢 目前可遊玩人員列表</h2>
+      <div id="schedule-list">載入中...</div>
+    </div>
+
+    <!-- 右欄：個人時段填寫 -->
+    <div class="card">
+      <h2>🕒 個人作息登記</h2>
+      <div id="auth-section">
+        <button id="login-btn" class="btn">使用 Discord 登入登記時間</button>
+      </div>
+
+      <div id="form-section" style="display: none;">
+        <div class="user-info">
+          <img id="avatar" class="user-avatar" src="" alt="avatar" />
+          <div>
+            <strong id="display-name"></strong>
+            <div style="font-size: 12px; color: #94a3b8;"><a href="#" id="logout-link" style="color:#ef4444;">登出</a></div>
+          </div>
+        </div>
+
+        <form id="schedule-form">
+          <label>日期：</label>
+          <input type="date" id="date" required />
+
+          <label>開始時間：</label>
+          <input type="time" id="start-time" required />
+
+          <label>結束時間：</label>
+          <input type="time" id="end-time" required />
+
+          <label>想玩的遊戲 / 備註：</label>
+          <input type="text" id="game-tag" placeholder="例如: 瓦羅蘭、Steam小遊戲、全通" />
+
+          <button type="submit" class="btn" style="background:#10b981;">送出我的時間</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === 替換成你的 Supabase 專案資訊 ===
+    const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+
+    // 初始化預設今日日期
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+    // 檢查登入狀態
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('form-section').style.display = 'block';
+        
+        const meta = currentUser.user_metadata;
+        document.getElementById('display-name').innerText = meta.full_name || meta.custom_claims?.global_name || '玩家';
+        document.getElementById('avatar').src = meta.avatar_url || 'https://via.placeholder.com/40';
+      } else {
+        currentUser = null;
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('form-section').style.display = 'none';
+      }
+      loadSchedules();
+    }
+
+    // Discord 登入
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: { redirectTo: window.location.origin + window.location.pathname }
+      });
+    });
+
+    // 登出
+    document.getElementById('logout-link').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await supabase.auth.signOut();
+      checkAuth();
+    });
+
+    // 撈取資料
+    async function loadSchedules() {
+      const { data, error } = await supabase
+        .from('gamer_schedules')
+        .select('*')
+        .gte('schedule_date', new Date().toISOString().split('T')[0])
+        .order('start_time', { ascending: true });
+
+      const listEl = document.getElementById('schedule-list');
+      if (!data || data.length === 0) {
+        listEl.innerHTML = '<p style="color:#94a3b8;">目前尚無人登記今日以後的時段。</p>';
+        return;
+      }
+
+      listEl.innerHTML = data.map(item => `
+        <div class="item">
+          <div>
+            <strong>${item.nickname}</strong> 
+            <span style="font-size:12px; color:#38bdf8;">[${item.schedule_date}]</span><br/>
+            <span>🕒 ${item.start_time.slice(0,5)} ~ ${item.end_time.slice(0,5)}</span>
+            ${item.game_tag ? `<div style="font-size:12px; color:#a7f3d0; margin-top:4px;">🎯 ${item.game_tag}</div>` : ''}
+          </div>
+          ${currentUser && currentUser.id === item.user_id ? 
+            `<button class="btn btn-del" onclick="deleteSchedule('${item.id}')">刪除</button>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // 新增時段
+    document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const meta = currentUser.user_metadata;
+      const nickname = meta.full_name || meta.custom_claims?.global_name || '未知玩家';
+
+      const newRecord = {
+        user_id: currentUser.id,
+        nickname: nickname,
+        schedule_date: document.getElementById('date').value,
+        start_time: document.getElementById('start-time').value,
+        end_time: document.getElementById('end-time').value,
+        game_tag: document.getElementById('game-tag').value
+      };
+
+      const { error } = await supabase.from('gamer_schedules').insert([newRecord]);
+      if (error) {
+        alert('儲存失敗：' + error.message);
+      } else {
+        alert('登記成功！');
+        loadSchedules();
+      }
+    });
+
+    // 刪除時段
+    window.deleteSchedule = async (id) => {
+      if (!confirm('確定刪除此時段？')) return;
+      const { error } = await supabase.from('gamer_schedules').delete().eq('id', id);
+      if (error) alert(error.message);
+      else loadSchedules();
+    };
+
+    // 即時同步監聽 (Realtime)
+    supabase
+      .channel('public:gamer_schedules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gamer_schedules' }, () => {
+        loadSchedules();
+      })
+      .subscribe();
+
+    checkAuth();
+  </script>
+</body>
+</html>
